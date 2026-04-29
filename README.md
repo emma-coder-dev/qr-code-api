@@ -91,8 +91,6 @@ uvicorn main:app --reload
 http://127.0.0.1:8000/docs
 ```
 
-You should see the Swagger UI with two endpoints listed: `/health` and `/generate`.
-
 ---
 
 ## 🚀 Minimal Working Example
@@ -132,6 +130,168 @@ GET /health
 
 ---
 
+## 🖥️ How to Use the Swagger UI at /docs
+
+When you run the server and open `http://127.0.0.1:8000/docs` in your browser, FastAPI automatically shows an interactive page called **Swagger UI**. This page lets you test your API directly from the browser without needing any extra tools like Postman.
+
+Here is what you will see and how to use it:
+
+---
+
+### What the /docs page shows
+
+At the top you will see the API name, version, and description:
+```
+QR Code Generator API  1.0.0
+A simple API to generate scannable QR codes from any text or URL
+```
+
+Below that, you will see two endpoints listed:
+
+```
+GET   /health     Health Check
+POST  /generate   Generate Qr
+```
+
+Each endpoint shows its HTTP method (GET or POST) and a short description.
+
+---
+
+### How to test the GET /health endpoint
+
+The health endpoint checks that your API is running. Here is how to use it:
+
+1. Click on **GET /health** to expand it
+2. Click the **Try it out** button on the right
+3. Click the blue **Execute** button
+4. Scroll down to see the **Response body**
+
+You should see:
+```json
+{
+  "status": "API is running"
+}
+```
+
+A **200** response code means the request was successful and the API is working.
+
+---
+
+### How to test the POST /generate endpoint
+
+The generate endpoint creates a QR code from whatever text or URL you send. Here is how to use it:
+
+1. Click on **POST /generate** to expand it
+2. Click the **Try it out** button
+3. You will see a **Request body** text box with this default content:
+```json
+{
+  "text": "string"
+}
+```
+4. Replace `"string"` with whatever you want to encode. See examples below.
+5. Click the blue **Execute** button
+6. Scroll down — under **Response body** you will see a **Download file** link
+7. Click it to download the QR code image
+8. Open the image and scan it with your phone camera
+
+---
+
+### What you can encode — Examples
+
+**A website URL:**
+```json
+{
+  "text": "https://github.com/Emma-coder-dev"
+}
+```
+Scanning opens the URL in the phone browser.
+
+---
+
+**Plain text:**
+```json
+{
+  "text": "Hello Moringa School"
+}
+```
+Scanning displays the text on the phone screen.
+
+---
+
+**An email address:**
+```json
+{
+  "text": "mailto:kagenineema@gmail.com"
+}
+```
+Scanning prompts the phone to open the email app with the address pre-filled.
+
+---
+
+**A phone number:**
+```json
+{
+  "text": "tel:+254700000000"
+}
+```
+Scanning prompts the phone to dial the number.
+
+---
+
+**WiFi credentials:**
+```json
+{
+  "text": "WIFI:S:NetworkName;T:WPA;P:yourpassword;;"
+}
+```
+Scanning prompts the phone to connect to the WiFi network automatically.
+
+---
+
+**A vCard (contact information):**
+```json
+{
+  "text": "BEGIN:VCARD\nVERSION:3.0\nFN:Neema Kageni\nTEL:+254700000000\nEMAIL:kagenineema@gmail.com\nEND:VCARD"
+}
+```
+Scanning prompts the phone to save the contact.
+
+---
+
+### Reading the response codes
+
+After executing a request, Swagger UI shows a **Code** field under the response. Here is what each code means:
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success — request worked correctly |
+| 400 | Bad Request — you sent invalid data (e.g. empty text) |
+| 422 | Unprocessable Entity — request body format is wrong |
+| 500 | Server Error — something went wrong on the API side |
+
+---
+
+### What happens if you send empty text
+
+If you send an empty string:
+```json
+{
+  "text": ""
+}
+```
+
+The API returns a **400 Bad Request** error:
+```json
+{
+  "detail": "Text cannot be empty. Please provide a URL or text to encode."
+}
+```
+
+This is intentional — empty input produces a blank QR code that cannot be scanned.
+
+---
+
 ## 🧪 Testing & Iteration
 
 All testing was done using the built-in FastAPI Swagger UI at `http://127.0.0.1:8000/docs`.
@@ -141,11 +301,12 @@ All testing was done using the built-in FastAPI Swagger UI at `http://127.0.0.1:
 | 1 | GET `/health` | `/health` | ✅ `{"status": "API is running"}` |
 | 2 | `{"text": "https://github.com"}` | `/generate` | ✅ QR generated, scanned, opened GitHub |
 | 3 | `{"text": "Hello Moringa School"}` | `/generate` | ✅ QR generated, scanned, showed text |
-| 4 | `{"text": "mailto:test@gmail.com"}` | `/generate` | ✅ QR generated, prompted email client |
-| 5 | `{"text": ""}` | `/generate` | ⚠️ Blank QR generated — no error thrown |
+| 4 | `{"text": "mailto:kagenineema@gmail.com"}` | `/generate` | ✅ QR generated, prompted email client |
+| 5 | `{"text": "tel:+254700000000"}` | `/generate` | ✅ QR generated, prompted phone dialer |
+| 6 | `{"text": ""}` | `/generate` | ⚠️ Originally blank QR — fixed with validation |
 
-**Iteration after Test 5:**
-Discovered that empty strings produce a blank QR code with no error. Added input validation using `HTTPException` to reject empty strings with a `400 Bad Request` response. This made the API more robust and production-ready.
+**Iteration after Test 6:**
+Empty strings originally produced a blank QR code with no error. Input validation was added using `HTTPException` to reject empty strings with a `400 Bad Request` response.
 
 ---
 
@@ -212,13 +373,13 @@ QR codes are used in real-world systems — payments, 2FA, marketing, logistics.
 No. The API is stateless — it generates the QR code on the fly per request. No storage is needed.
 
 **Q: What types of input does the API accept?**
-Any string — URLs, plain text, email addresses (`mailto:`), phone numbers (`tel:`), WiFi credentials, or any other text. The qrcode library encodes whatever string you send.
+Any string — URLs, plain text, email addresses (`mailto:`), phone numbers (`tel:`), WiFi credentials, vCards, or any other text. The qrcode library encodes whatever string you send.
 
 **Q: Can I deploy this API online?**
 Yes. Platforms like Railway, Render, or AWS can host it. The API has no database dependency, making deployment straightforward.
 
 **Q: What happens if I send an empty string?**
-After testing and iteration, the API now rejects empty strings with a `400 Bad Request` error and a clear message.
+The API rejects it with a `400 Bad Request` error and a clear message asking you to provide valid text.
 
 ---
 
@@ -277,5 +438,5 @@ Fix: python -m uvicorn main:app --reload
 
 ## 👤 Author
 
-**Neema Kageni**
+**Majira Neema Kageni**
 GitHub: [Emma-coder-dev](https://github.com/Emma-coder-dev)
